@@ -1,4 +1,4 @@
-$ErrorActionPreference = 'Stop'
+﻿$ErrorActionPreference = 'Stop'
 $key = 'HKLM:\SYSTEM\CurrentControlSet\Control\Keyboard Layout'
 $dir = Join-Path $env:USERPROFILE '.config\autohotkey'
 New-Item -ItemType Directory -Force -Path $dir | Out-Null
