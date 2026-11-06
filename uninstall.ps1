@@ -9,7 +9,7 @@ if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administra
     exit
 }
 
-Get-Process AutoHotkeyU64 -ErrorAction SilentlyContinue | Stop-Process -Force
+Get-Process AutoHotkey, AutoHotkey64, AutoHotkey32, AutoHotkeyU64, AutoHotkeyU32 -ErrorAction SilentlyContinue | Stop-Process -Force
 Start-Sleep -Milliseconds 300
 
 $startup = [Environment]::GetFolderPath('Startup')

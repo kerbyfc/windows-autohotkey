@@ -1,6 +1,6 @@
 # windows-autohotkey
 
-Настройка клавиатуры Windows на AutoHotkey v1: язык по одиночному Ctrl, Ctrl-аккорды
+Настройка клавиатуры Windows на AutoHotkey v2: язык по одиночному Ctrl, Ctrl-аккорды
 на русской раскладке, CapsLock как Esc/Ctrl, перестановка модификаторов.
 
 ## Что делает
@@ -32,7 +32,7 @@
 
 Установщик:
 
-- ставит AutoHotkey через winget, если `AutoHotkeyU64.exe` нет;
+- ставит или обновляет AutoHotkey v2 через winget (`AutoHotkey\v2\AutoHotkey64.exe`);
 - копирует `keyboard.ahk` и `scancode-map.ps1` в `%USERPROFILE%\.config\autohotkey`;
 - останавливает старый AutoHotkey и убирает прежний ярлык `Ctrl-Tap Language.lnk`;
 - создаёт ярлык `Keyboard.lnk` в Startup;

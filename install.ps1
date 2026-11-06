@@ -10,21 +10,31 @@ if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administra
 }
 
 $root = $PSScriptRoot
-$ahk = 'C:\Program Files\AutoHotkey\AutoHotkeyU64.exe'
 
-if (-not (Test-Path -LiteralPath $ahk)) {
-    $winget = Get-Command winget.exe -ErrorAction SilentlyContinue
-    if (-not $winget) {
-        $candidate = Join-Path $env:LOCALAPPDATA 'Microsoft\WindowsApps\winget.exe'
-        if (Test-Path -LiteralPath $candidate) { $winget = $candidate }
+function Find-Ahk {
+    foreach ($base in @($env:ProgramFiles, (Join-Path $env:LOCALAPPDATA 'Programs'))) {
+        $exe = Join-Path $base 'AutoHotkey\v2\AutoHotkey64.exe'
+        if (Test-Path -LiteralPath $exe) { return $exe }
     }
-    if (-not $winget) {
-        throw 'AutoHotkey не установлен, winget не найден: поставь AutoHotkey v1 и повтори'
+    return $null
+}
+
+$winget = Get-Command winget.exe -ErrorAction SilentlyContinue
+if (-not $winget) {
+    $candidate = Join-Path $env:LOCALAPPDATA 'Microsoft\WindowsApps\winget.exe'
+    if (Test-Path -LiteralPath $candidate) { $winget = $candidate }
+}
+
+# Скрипт под AutoHotkey v2: ставим или обновляем до последней версии.
+if ($winget) {
+    & $winget install --id AutoHotkey.AutoHotkey -e --scope machine --accept-source-agreements --accept-package-agreements
+    if (-not (Find-Ahk)) {
+        & $winget upgrade --id AutoHotkey.AutoHotkey -e --accept-source-agreements --accept-package-agreements
     }
-    & $winget install --id AutoHotkey.AutoHotkey -e --accept-source-agreements --accept-package-agreements
-    if (-not (Test-Path -LiteralPath $ahk)) {
-        throw "AutoHotkey установлен, но $ahk не найден"
-    }
+}
+$ahk = Find-Ahk
+if (-not $ahk) {
+    throw 'AutoHotkey v2 не найден (AutoHotkey\v2\AutoHotkey64.exe): поставь AutoHotkey v2 и повтори'
 }
 
 $dir = Join-Path $env:USERPROFILE '.config\autohotkey'
@@ -32,7 +42,7 @@ New-Item -ItemType Directory -Force -Path $dir | Out-Null
 Copy-Item -LiteralPath (Join-Path $root 'keyboard.ahk') -Destination $dir -Force
 Copy-Item -LiteralPath (Join-Path $root 'scancode-map.ps1') -Destination $dir -Force
 
-Get-Process AutoHotkeyU64 -ErrorAction SilentlyContinue | Stop-Process -Force
+Get-Process AutoHotkey, AutoHotkey64, AutoHotkey32, AutoHotkeyU64, AutoHotkeyU32 -ErrorAction SilentlyContinue | Stop-Process -Force
 Start-Sleep -Milliseconds 300
 
 $startup = [Environment]::GetFolderPath('Startup')
