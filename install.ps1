@@ -1,11 +1,17 @@
-﻿$ErrorActionPreference = 'Stop'
+﻿param(
+    [switch]$Mac,
+    [switch]$Pc
+)
+$ErrorActionPreference = 'Stop'
 
 $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
 $principal = New-Object Security.Principal.WindowsPrincipal($identity)
 if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-    Start-Process powershell.exe -Verb RunAs -ArgumentList @(
-        '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $PSCommandPath
-    )
+    # -NoExit: иначе окно после UAC закрывается мгновенно и ошибку не видно.
+    $argv = @('-NoExit', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', ('"' + $PSCommandPath + '"'))
+    if ($Mac) { $argv += '-Mac' }
+    if ($Pc) { $argv += '-Pc' }
+    Start-Process powershell.exe -Verb RunAs -ArgumentList $argv
     exit
 }
 
@@ -58,8 +64,19 @@ $link.WorkingDirectory = $dir
 $link.WindowStyle = 1
 $link.Save()
 
-& (Join-Path $dir 'scancode-map.ps1')
+# Карта: только на Apple-железе, если не задан -Mac/-Pc явно.
+$mapArgs = @{}
+if ($Mac) { $mapArgs['Mac'] = $true }
+if ($Pc) { $mapArgs['Pc'] = $true }
+$mapOut = & (Join-Path $dir 'scancode-map.ps1') @mapArgs
+$mapOut
+$mapApplied = -not ($mapOut -match '^layout=skip')
 Start-Process -FilePath $ahk -ArgumentList ('"' + (Join-Path $dir 'keyboard.ahk') + '"')
 
-Write-Host 'Установлено: keyboard.ahk и карта клавиш.'
-Write-Host 'Перезагрузи компьютер — Scancode Map применяется только при старте.'
+if ($mapApplied) {
+    Write-Host 'Установлено: keyboard.ahk и карта клавиш.'
+    Write-Host 'Перезагрузи компьютер — Scancode Map применяется только при старте.'
+} else {
+    Write-Host 'Установлено: keyboard.ahk. Карту клавиш не трогали — это не Apple-железо.'
+    Write-Host 'Нужна PC-карта? Перезапусти с флагом -Pc.'
+}
