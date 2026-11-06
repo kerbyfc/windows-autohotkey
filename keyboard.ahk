@@ -187,6 +187,11 @@ CapsRelease:
     }
 return
 
+; Как Cmd+Shift+[ / ] на маке: Ctrl+Shift+[ — предыдущая вкладка, Ctrl+Shift+] —
+; следующая. Скан-коды, чтобы работало и на русской раскладке (х/ъ).
+^+SC01A::Send ^+{Tab}
+^+SC01B::Send ^{Tab}
+
 ; Мышь с зажатым Ctrl — не одиночное нажатие.
 ~*LButton::
 ~*RButton::
