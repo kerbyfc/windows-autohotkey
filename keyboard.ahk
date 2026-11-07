@@ -20,7 +20,6 @@ global capsActive := false
 global capsUsed := false
 global capsWasRussian := false
 global capsDownTime := 0
-global capsSynth := false
 global ctrlHwnd := 0
 global ctrlTid := 0
 global altTabActive := false
@@ -28,8 +27,6 @@ global altTabActive := false
 ~LControl::
 {
     global
-    if (capsSynth)
-        return
     if (ctrlActive)
         return
     ctrlActive := true
@@ -60,8 +57,6 @@ global altTabActive := false
 ~LControl Up::
 {
     global
-    if (capsSynth)
-        return
     ctrlActive := false
 
     ; Ctrl+Tab переключал окна: отпускаем Alt — переключатель выбирает окно.
@@ -126,9 +121,13 @@ global altTabActive := false
     wasRussian := false
 }
 
-; CapsLock: одиночное нажатие — Esc, аккорд — Ctrl. Драйвер больше не
-; переводит CapsLock в Esc (scancode-map.ps1), иначе AHK не увидит клавишу.
-*CapsLock::
+; CapsLock: Ctrl, пока зажат; Esc — один раз при отпускании и только если за
+; время удержания не нажали ничего другого. Время удержания не ограничено,
+; автоповтор игнорируется. Драйвер больше не переводит CapsLock в Esc
+; (scancode-map.ps1), иначе AHK не увидит клавишу.
+; Ловим по скан-коду SC03A: в Colemak эта клавиша — Backspace, а не CapsLock, и
+; после переключения на английский отпускание иначе не поймать (Ctrl залипал).
+*SC03A::
 {
     global
     if (capsActive)
@@ -139,7 +138,9 @@ global altTabActive := false
     capsDownTime := A_TickCount
 
     ; Ctrl — сразу, чтобы первая клавиша аккорда уже шла с модификатором.
-    SendSynth("{Blind}{LControl Down}")
+    ; SendLevel 0: хоткеи ~LControl его не видят, в A_PriorKey он не попадает,
+    ; а модификатором для ^-хоткеев (Ctrl+Shift+[) остаётся.
+    Send "{Blind}{LControl Down}"
 
     hwnd := DllCall("GetForegroundWindow", "Ptr")
     if !hwnd
@@ -154,13 +155,19 @@ global altTabActive := false
     }
 }
 
-*CapsLock Up::
+*SC03A Up::
 {
     global
+    ; Ctrl отпускаем всегда, даже если состояние уже сбросил сторож.
+    Send "{Blind}{LControl Up}"
+    if (!capsActive)
+        return
     capsActive := false
-    SendSynth("{Blind}{LControl Up}")
 
-    if (A_PriorKey != "CapsLock" && A_PriorKey != "LControl" && A_PriorKey != "Control")
+    ; Свой Send на SendLevel 0 в историю клавиш не попадает, поэтому A_PriorKey —
+    ; последняя физическая клавиша. Сама эта клавиша называется CapsLock или
+    ; Backspace (Colemak); настоящий Backspace ловит хоткей ниже.
+    if (A_PriorKey != "" && A_PriorKey != "CapsLock" && A_PriorKey != "Backspace")
         capsUsed := true
 
     hwnd := DllCall("GetForegroundWindow", "Ptr")
@@ -171,11 +178,20 @@ global altTabActive := false
         SwitchToRussian(hwnd, tid)
 
     if (!capsUsed)
-        SendSynth("{Esc}")
+        Send "{Esc}"
 
     capsUsed := false
     capsWasRussian := false
 }
+
+; Настоящий Backspace (SC00E) при зажатом CapsLock — аккорд Ctrl+Backspace.
+#HotIf capsActive
+~*SC00E::
+{
+    global capsUsed
+    capsUsed := true
+}
+#HotIf
 
 ; Как Cmd+Shift+[ / ] на маке: Ctrl+Shift+[ — предыдущая вкладка, Ctrl+Shift+] —
 ; следующая. Скан-коды, чтобы работало и на русской раскладке (х/ъ).
@@ -214,23 +230,17 @@ global altTabActive := false
     global
     if GetKeyState("Ctrl", "P")
         ctrlUsed := true
+    if (capsActive)
+        capsUsed := true
 }
 
-; Синтетический ввод на SendLevel 1; ~LControl его пропускает по capsSynth.
-SendSynth(keys) {
-    global capsSynth
-    capsSynth := true
-    SendLevel 1
-    Send keys
-    SendLevel 0
-    capsSynth := false
-}
-
+; Страховка от потерянного отпускания (UAC, блокировка экрана): CapsLock
+; физически отпущен, а мы всё ещё держим Ctrl. Esc при этом не шлём.
 CapsWatchdog() {
     global
-    if (capsActive && A_TickCount - capsDownTime > 8000) {
+    if (capsActive && !GetKeyState("SC03A", "P")) {
         capsActive := false
-        SendSynth("{Blind}{LControl Up}")
+        Send "{Blind}{LControl Up}"
         capsUsed := false
         capsWasRussian := false
     }
@@ -240,7 +250,7 @@ CapsRelease(*) {
     global
     if (capsActive) {
         capsActive := false
-        SendSynth("{Blind}{LControl Up}")
+        Send "{Blind}{LControl Up}"
     }
 }
 
