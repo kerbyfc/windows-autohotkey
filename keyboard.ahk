@@ -21,6 +21,9 @@ global capsUsed := false
 global capsWasRussian := false
 global capsDownTime := 0
 global capsSynth := false
+global ctrlHwnd := 0
+global ctrlTid := 0
+global altTabActive := false
 
 ~LControl::
 {
@@ -33,6 +36,8 @@ global capsSynth := false
     ctrlUsed := false
     ctrlDownTime := A_TickCount
     wasRussian := false
+    ctrlHwnd := 0
+    ctrlTid := 0
 
     hwnd := DllCall("GetForegroundWindow", "Ptr")
     if !hwnd
@@ -40,6 +45,8 @@ global capsSynth := false
     tid := DllCall("GetWindowThreadProcessId", "Ptr", hwnd, "Ptr", 0, "UInt")
     if !tid
         return
+    ctrlHwnd := hwnd
+    ctrlTid := tid
     current := DllCall("GetKeyboardLayout", "UInt", tid, "Ptr")
     lang := current & 0xFFFF
     if (lang = 0x0419) {
@@ -56,6 +63,18 @@ global capsSynth := false
     if (capsSynth)
         return
     ctrlActive := false
+
+    ; Ctrl+Tab переключал окна: отпускаем Alt — переключатель выбирает окно.
+    ; Русский возвращаем исходному окну, а не новому активному.
+    if (altTabActive) {
+        altTabActive := false
+        Send "{Blind}{LAlt Up}"
+        if (wasRussian && ctrlHwnd && ctrlTid)
+            SwitchToRussian(ctrlHwnd, ctrlTid)
+        ctrlUsed := false
+        wasRussian := false
+        return
+    }
 
     hwnd := DllCall("GetForegroundWindow", "Ptr")
     tid := 0
@@ -162,6 +181,22 @@ global capsSynth := false
 ; следующая. Скан-коды, чтобы работало и на русской раскладке (х/ъ).
 ^+SC01A::Send "^+{Tab}"
 ^+SC01B::Send "^{Tab}"
+
+; Как Cmd+Tab на маке: Ctrl+Tab / Ctrl+Shift+Tab — переключатель окон (Alt+Tab).
+; Только настоящий левый Ctrl (физический Alt), не CapsLock: Caps+Tab остаётся
+; переключением вкладок. Ctrl логически отпускаем, иначе Ctrl+Alt+Tab откроет
+; «залипающий» переключатель; Alt держим до отпускания физического Ctrl.
+#HotIf !capsActive
+<^Tab::
+<^+Tab::
+{
+    global altTabActive
+    altTabActive := true
+    Send "{Blind}{LControl Up}{LAlt Down}{Tab}"
+}
+#HotIf altTabActive
+*Tab::Send "{Blind}{Tab}"
+#HotIf
 
 ; Мышь с зажатым Ctrl — не одиночное нажатие.
 ~*LButton::
