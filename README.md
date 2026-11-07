@@ -17,6 +17,8 @@
 - `Ctrl+Tab` / `Ctrl+Shift+Tab` — переключатель окон (`Alt+Tab`), как `Cmd+Tab` на
   маке: держи Ctrl и жми Tab, окно выбирается при отпускании Ctrl. Только левый Ctrl
   (физический `Left Alt`); `CapsLock+Tab` по-прежнему переключает вкладки.
+- `Alt+Tab` / `Alt+Shift+Tab` (физический `Left Win`) — следующая/предыдущая вкладка
+  (`Ctrl+Tab` / `Ctrl+Shift+Tab`), как `Ctrl+Tab` на маке.
 
 ## Установка
 

@@ -196,6 +196,12 @@ global altTabActive := false
 }
 #HotIf altTabActive
 *Tab::Send "{Blind}{Tab}"
+
+; Alt+Tab (физический Win) — вкладки, как Ctrl+Shift+] / [. Отключено, пока
+; открыт переключатель окон: там Alt наш синтетический.
+#HotIf !altTabActive
+<!Tab::Send "^{Tab}"
+<!+Tab::Send "^+{Tab}"
 #HotIf
 
 ; Мышь с зажатым Ctrl — не одиночное нажатие.
